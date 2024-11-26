@@ -6,72 +6,110 @@
 /*   By: blohrer <blohrer@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/21 10:50:03 by blohrer           #+#    #+#             */
-/*   Updated: 2024/11/21 12:38:52 by blohrer          ###   ########.fr       */
+/*   Updated: 2024/11/25 14:26:25 by blohrer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-static char	*extract_line(char **buffer)
+char	*extract_line(char *str)
 {
-	int		i;
+	size_t	i;
 	char	*line;
-	char	*temp;
 
 	i = 0;
-	while ((*buffer)[i] && (*buffer)[i] != '\n')
+	if (!str || str[0] == '\0')
+		return (NULL);
+	while (str[i] && str[i] != '\n')
 		i++;
-	line = ft_substr(*buffer, 0, i + ((*buffer)[i] == '\n'));
-	temp = ft_strdup(&(*buffer)[i + ((*buffer)[i] == '\n')]);
-	free(*buffer);
-	*buffer = temp;
+	if (str[i] == '\n')
+		i++;
+	line = (char *)malloc(sizeof(char) * (i + 1));
+	if (!line)
+		return (NULL);
+	i = 0;
+	while (str[i] && str[i] != '\n')
+	{
+		line[i] = str[i];
+		i++;
+	}
+	if (str[i] == '\n')
+		line[i++] = '\n';
+	line[i] = '\0';
 	return (line);
+}
+
+static char	*allocate_and_copy(const char *str, size_t start)
+{
+	size_t	i;
+	char	*rest;
+
+	rest = (char *)malloc(sizeof(char) * (ft_strlen(str) - start + 1));
+	if (!rest)
+		return (NULL);
+	i = 0;
+	while (str[start])
+		rest[i++] = str[start++];
+	rest[i] = '\0';
+	return (rest);
+}
+
+char	*save_remaining(char *str)
+{
+	size_t	i;
+	char	*rest;
+
+	i = 0;
+	if (!str)
+		return (NULL);
+	while (str[i] && str[i] != '\n')
+		i++;
+	if (!str[i])
+	{
+		free(str);
+		return (NULL);
+	}
+	i++;
+	rest = allocate_and_copy(str, i);
+	free(str);
+	return (rest);
+}
+
+static char	*clean_up(char **rest)
+{
+	if (*rest)
+	{
+		free(*rest);
+		*rest = NULL;
+	}
+	return (NULL);
 }
 
 char	*get_next_line(int fd)
 {
-	static char	*buffer;
-	char		tmp[BUFFER_SIZE + 1];
+	static char	*rest;
+	char		buffer[BUFFER_SIZE + 1];
+	char		*line;
 	int			bytes_read;
 
 	if (fd < 0 || BUFFER_SIZE <= 0)
 		return (NULL);
-	bytes_read = 1;
-	while (bytes_read > 0 && !ft_strchr(buffer, '\n'))
+	bytes_read = read(fd, buffer, BUFFER_SIZE);
+	while (bytes_read > 0)
 	{
-		bytes_read = read(fd, tmp, BUFFER_SIZE);
-		if (bytes_read > 0)
-		{
-			tmp[bytes_read] = '\0';
-			buffer = ft_strjoin(buffer, tmp);
-		}
+		buffer[bytes_read] = '\0';
+		rest = ft_strjoin(rest, buffer);
+		if (!rest)
+			return (NULL);
+		if (ft_strchr(rest, '\n'))
+			break ;
+		bytes_read = read(fd, buffer, BUFFER_SIZE);
 	}
-	if (bytes_read < 0 || !buffer || !*buffer)
-		return (free(buffer), buffer = NULL, NULL);
-	return (extract_line(&buffer));
+	if (bytes_read < 0 || (bytes_read == 0 && (!rest || rest[0] == '\0')))
+		return (clean_up(&rest));
+	line = extract_line(rest);
+	if (!line)
+		return (clean_up(&rest));
+	rest = save_remaining(rest);
+	return (line);
 }
-
-// char	*get_next_line(int fd)
-// {
-// 	static char	*buffer;
-// 	char		tmp[BUFFER_SIZE + 1];
-// 	int			bytes_read;
-
-// 	if (fd < 0 || BUFFER_SIZE <= 0)
-// 		return (NULL);
-// 	while (!ft_strchr(buffer, '\n'))
-// 	{
-// 		bytes_read = read(fd, tmp, BUFFER_SIZE);
-// 		if (bytes_read <= 0)
-// 			break ;
-// 		tmp[bytes_read] = '\0';
-// 		buffer = ft_strjoin(buffer, tmp);
-// 	}
-// 	if (!buffer || !*buffer)
-// 	{
-// 		free(buffer);
-// 		buffer = NULL;
-// 		return (NULL);
-// 	}
-// 	return (extract_line(&buffer));
-// }
