@@ -6,7 +6,7 @@
 /*   By: blohrer <blohrer@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/11/21 10:50:03 by blohrer           #+#    #+#             */
-/*   Updated: 2024/11/25 14:26:25 by blohrer          ###   ########.fr       */
+/*   Updated: 2024/12/02 11:38:43 by blohrer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,17 +99,16 @@ char	*get_next_line(int fd)
 	{
 		buffer[bytes_read] = '\0';
 		rest = ft_strjoin(rest, buffer);
-		if (!rest)
-			return (NULL);
-		if (ft_strchr(rest, '\n'))
-			break ;
-		bytes_read = read(fd, buffer, BUFFER_SIZE);
+		if (!rest || ft_strchr(rest, '\n'))
+			bytes_read = 0;
+		else
+			bytes_read = read(fd, buffer, BUFFER_SIZE);
 	}
-	if (bytes_read < 0 || (bytes_read == 0 && (!rest || rest[0] == '\0')))
+	if (bytes_read < 0 || !rest || rest[0] == '\0')
 		return (clean_up(&rest));
 	line = extract_line(rest);
-	if (!line)
-		return (clean_up(&rest));
 	rest = save_remaining(rest);
-	return (line);
+	if (line)
+		return (line);
+	return (clean_up(&rest));
 }
