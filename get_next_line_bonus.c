@@ -1,16 +1,16 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*   get_next_line_bonus.c                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: blohrer <blohrer@student.42.fr>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/11/21 10:50:03 by blohrer           #+#    #+#             */
-/*   Updated: 2024/12/03 09:17:34 by blohrer          ###   ########.fr       */
+/*   Created: 2024/12/03 09:23:50 by blohrer           #+#    #+#             */
+/*   Updated: 2024/12/03 10:33:01 by blohrer          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "get_next_line.h"
+#include "get_next_line_bonus.h"
 
 char	*extract_line(char *str)
 {
@@ -87,28 +87,29 @@ char	*clean_up(char **rest)
 
 char	*get_next_line(int fd)
 {
-	static char	*rest;
+	static char	*rest[OPEN_MAX];
 	char		buffer[BUFFER_SIZE + 1];
 	char		*line;
 	int			bytes_read;
 
-	if (fd < 0 || BUFFER_SIZE <= 0)
+	if (fd < 0 || BUFFER_SIZE <= 0 || fd >= OPEN_MAX)
 		return (NULL);
-	bytes_read = read(fd, buffer, BUFFER_SIZE);
-	while (bytes_read > 0)
+	bytes_read = 1;
+	while (bytes_read > 0 && (!rest[fd] || !ft_strchr(rest[fd], '\n')))
 	{
+		bytes_read = read(fd, buffer, BUFFER_SIZE);
+		if (bytes_read < 0)
+			return (clean_up(&rest[fd]));
 		buffer[bytes_read] = '\0';
-		rest = ft_strjoin(rest, buffer);
-		if (!rest || ft_strchr(rest, '\n'))
-			bytes_read = 0;
-		else
-			bytes_read = read(fd, buffer, BUFFER_SIZE);
+		rest[fd] = ft_strjoin(rest[fd], buffer);
+		if (!rest[fd])
+			return (clean_up(&rest[fd]));
 	}
-	if (bytes_read < 0 || !rest || rest[0] == '\0')
-		return (clean_up(&rest));
-	line = extract_line(rest);
-	rest = save_remaining(rest);
-	if (line)
-		return (line);
-	return (clean_up(&rest));
+	if (!rest[fd] || (bytes_read == 0 && rest[fd][0] == '\0'))
+		return (clean_up(&rest[fd]));
+	line = extract_line(rest[fd]);
+	rest[fd] = save_remaining(rest[fd]);
+	if (!line)
+		return (clean_up(&rest[fd]));
+	return (line);
 }
